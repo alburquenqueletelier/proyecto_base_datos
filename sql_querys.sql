@@ -1,7 +1,9 @@
 /*     Consultas SQL para la fase 2 del proyecto Base de datos      */
 
+/*
 -- Consulta 1 --
 -- Todos los pacientes que se atendieron durante el mes de abril y que recibieron receta
+*/
 -- SELECT DISTINCT p.*
 -- FROM paciente p
 -- INNER JOIN control_medico cm ON p.rut_paciente = cm.rut_paciente
@@ -13,18 +15,18 @@
 -- ENCLOSED BY '"'
 -- LINES TERMINATED BY '\n';
 
+/*
 -- Consulta 2
--- Todos los pacientes femeninos que tengan previsión fonasa, sean de valparaíso y se atendieron con DANIEL HERNAN ARANEDA
+-- Todos los pacientes femeninos que tengan previsión fonasa y se atendieron con DANIEL HERNAN ARANEDA
+*/
 -- SELECT DISTINCT p.*
 -- FROM paciente p
 -- INNER JOIN control_medico cm ON p.rut_paciente = cm.rut_paciente
 -- INNER JOIN profesionalmedico pm ON cm.rut_profesionalmedico = pm.rut_profesionalmedico
 -- INNER JOIN sexo s ON p.idsexo = s.idsexo
 -- INNER JOIN prevision pr ON p.idprevision = pr.idprevision
--- INNER JOIN comuna c ON p.cod_comuna = c.cod_comuna
 -- WHERE s.idsexo = 2
 --  AND pr.nombre_prevision = 'Fonasa'
---  AND c.nombre_comuna = 'Valparaíso'
 --  AND pm.rut_profesionalmedico = 17235988
 --  AND pm.dig_rut = 7
 -- INTO OUTFILE '/var/lib/mysql-files/consulta2.csv'
@@ -32,23 +34,28 @@
 -- ENCLOSED BY '"'
 -- LINES TERMINATED BY '\n';
 
+/*
 -- Consulta 3
--- Todos los profesionales médicos especialidad Neurología que han atendido a más de 6 pacientes en el mes de abril
--- SELECT pm.*, COUNT(DISTINCT cm.rut_paciente) as total_pacientes
--- FROM profesionalmedico pm
--- INNER JOIN control_medico cm ON pm.rut_profesionalmedico = cm.rut_profesionalmedico
--- WHERE pm.especialidad = 'Neurología'
---  AND MONTH(cm.fecha_asistencia) = 4
---  AND cm.fecha_asistencia IS NOT NULL
--- GROUP BY pm.rut_profesionalmedico
--- HAVING COUNT(DISTINCT cm.rut_paciente) > 6
--- INTO OUTFILE '/var/lib/mysql-files/consulta3.csv'
--- FIELDS TERMINATED BY ',' 
--- ENCLOSED BY '"'
--- LINES TERMINATED BY '\n';
+-- Todos los pacientes que se han atendido con todos los doctores
+*/--,COUNT(DISTINCT cm.rut_paciente) as total_pacientes
 
+SELECT pm.* 
+FROM profesionalmedico pm
+INNER JOIN control_medico cm ON pm.rut_profesionalmedico = cm.rut_profesionalmedico
+WHERE pm.especialidad COLLATE utf8_general_ci = 'Neurología'
+ AND YEAR(cm.fecha_asistencia) = 2022
+ AND cm.fecha_asistencia IS NOT NULL
+GROUP BY pm.rut_profesionalmedico
+HAVING COUNT(DISTINCT cm.rut_paciente) > 1
+INTO OUTFILE '/var/lib/mysql-files/consulta3.csv'
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n';
+
+/*
 -- Consulta 4
 -- Listar nombre y apellido de todos los doctores que han entregado más licencias que el promedio de licencias durante el año 2024
+*/
 -- SELECT pm.nombres, pm.ap_paterno, COUNT(l.folio) as total_licencias
 -- FROM profesionalmedico pm
 -- INNER JOIN control_medico cm ON pm.rut_profesionalmedico = cm.rut_profesionalmedico
@@ -72,8 +79,10 @@
 -- ENCLOSED BY '"'
 -- LINES TERMINATED BY '\n';
 
+/*
 -- Consulta 5
 -- Listar todos los pacientes que han tenido licencia medica el 2025
+*/
 -- SELECT DISTINCT * 
 -- FROM paciente p
 -- INNER JOIN control_medico cm ON p.rut_paciente = cm.rut_paciente
