@@ -36,44 +36,32 @@
 
 /*
 -- Consulta 3
--- Todos los pacientes que se han atendido con todos los doctores
-*/--,COUNT(DISTINCT cm.rut_paciente) as total_pacientes
+-- Total de controles efectuados por cada año en el que se tenga registros
+*/
 
-SELECT pm.* 
-FROM profesionalmedico pm
-INNER JOIN control_medico cm ON pm.rut_profesionalmedico = cm.rut_profesionalmedico
-WHERE pm.especialidad COLLATE utf8_general_ci = 'Neurología'
- AND YEAR(cm.fecha_asistencia) = 2022
- AND cm.fecha_asistencia IS NOT NULL
-GROUP BY pm.rut_profesionalmedico
-HAVING COUNT(DISTINCT cm.rut_paciente) > 1
-INTO OUTFILE '/var/lib/mysql-files/consulta3.csv'
-FIELDS TERMINATED BY ',' 
+SELECT YEAR(fecha_asistencia) AS año, COUNT(*) AS total_controles
+FROM control_medico
+WHERE fecha_asistencia IS NOT NULL
+GROUP BY YEAR(fecha_asistencia)
+ORDER BY año
+INTO OUTFILE '/var/lib/mysql-files/consulta3_pacientes.csv'
+FIELDS TERMINATED BY ','
 ENCLOSED BY '"'
 LINES TERMINATED BY '\n';
 
 /*
 -- Consulta 4
--- Listar nombre y apellido de todos los doctores que han entregado más licencias que el promedio de licencias durante el año 2024
+-- Controles agendados vs controles efectuados por cada año
 */
--- SELECT pm.nombres, pm.ap_paterno, COUNT(l.folio) as total_licencias
--- FROM profesionalmedico pm
--- INNER JOIN control_medico cm ON pm.rut_profesionalmedico = cm.rut_profesionalmedico
--- INNER JOIN licencia l ON cm.licencia_folio = l.folio
--- WHERE YEAR(cm.fecha_asistencia) = 2024
---  AND cm.fecha_asistencia IS NOT NULL
--- GROUP BY pm.rut_profesionalmedico, pm.nombres, pm.ap_paterno
--- HAVING COUNT(l.folio) > (
---    SELECT AVG(licencias_por_doctor)
---    FROM (
---        SELECT COUNT(l2.folio) as licencias_por_doctor
---        FROM profesionalmedico pm2
---        INNER JOIN control_medico cm2 ON pm2.rut_profesionalmedico = cm2.rut_profesionalmedico
---        INNER JOIN licencia l2 ON cm2.licencia_folio = l2.folio
---        WHERE cm2.fecha_asistencia IS NOT NULL
---        GROUP BY pm2.rut_profesionalmedico
---    ) as subconsulta
--- )
+SELECT 
+    YEAR(fecha_agendada) AS año,
+    COUNT(*) AS controles_registrados,
+    COUNT(fecha_asistencia) AS controles_efectuados,
+    COUNT(*) - COUNT(fecha_asistencia) AS diferencia
+FROM control_medico
+WHERE fecha_agendada IS NOT NULL
+GROUP BY YEAR(fecha_agendada)
+ORDER BY año;
 -- INTO OUTFILE '/var/lib/mysql-files/consulta4.csv'
 -- FIELDS TERMINATED BY ',' 
 -- ENCLOSED BY '"'
@@ -81,13 +69,24 @@ LINES TERMINATED BY '\n';
 
 /*
 -- Consulta 5
--- Listar todos los pacientes que han tenido licencia medica el 2025
+-- Listar los nombres del medicamento más recetado por cada año
 */
--- SELECT DISTINCT * 
--- FROM paciente p
--- INNER JOIN control_medico cm ON p.rut_paciente = cm.rut_paciente
--- INNER JOIN licencia l ON cm.licencia_folio = l.folio
--- WHERE YEAR(cm.fecha_asistencia) = 2025
+SELECT año, nombre, total_recetas
+FROM (
+    SELECT 
+        YEAR(cm.fecha_asistencia) AS año,
+        m.nombre,
+        COUNT(*) AS total_recetas,
+        ROW_NUMBER() OVER (PARTITION BY YEAR(cm.fecha_asistencia) ORDER BY COUNT(*) DESC) AS rn
+    FROM medicamento m
+    INNER JOIN receta_medicamento rm ON m.idmedicamento = rm.medicamento_idmedicamento
+    INNER JOIN receta r ON rm.receta_idreceta = r.idreceta
+    INNER JOIN control_medico cm ON r.idreceta = cm.idreceta
+    WHERE cm.fecha_asistencia IS NOT NULL
+    GROUP BY YEAR(cm.fecha_asistencia), m.idmedicamento, m.nombre
+) ranked
+WHERE rn = 1
+ORDER BY año;
 -- INTO OUTFILE '/var/lib/mysql-files/consulta5.csv'
 -- FIELDS TERMINATED BY ','
 -- ENCLOSED BY '"'
